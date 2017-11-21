@@ -1,0 +1,22 @@
+/* see net/ipv4/udp.c for details */
+
+/* set to correct values */
+global g_daddr = "239.195.1.81"
+
+function get_time_ns:long () %{ /* pure */
+    unsigned long ret;
+    struct timespec t;
+    getrawmonotonic(&t);
+    ret = t.tv_sec * 1000000000 + t.tv_nsec;
+    STAP_RETURN(ret);
+%}
+
+probe kernel.function("__udp_queue_rcv_skb") {
+    iphdr  = __get_skb_iphdr($skb)
+    daddr  = format_ipaddr(__ip_skb_daddr(iphdr), AF_INET())
+
+    if (daddr == g_daddr) {
+        printf("%ld: __udp_queue_rcv_skb\n", get_time_ns())
+    }
+}
+
